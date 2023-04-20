@@ -25,14 +25,14 @@ class CameraControl:
 
         self.client.connect("localhost", 1883, 60)
 
-    def getRealTimeCamera(self):
+    def getRealTimeCamera(self,selectData):
         mp_drawing = mp.solutions.drawing_utils
         mp_holistic = mp.solutions.holistic
         cap = cv2.VideoCapture(0)
         # Initiate holistic model
         with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
             
-            while cap.isOpened():
+            while cap.isOpened() and selectData:
                 ret, frame = cap.read()
                 
                 # Recolor Feed
@@ -59,7 +59,7 @@ class CameraControl:
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
 
                 #print(type(results.left_hand_landmarks))
-                print(results.multi_hand_landmarks)
+                print(results.left_hand_landmarks)
 
                                 
                 cv2.imshow('Raw Webcam Feed', image)
@@ -75,7 +75,9 @@ class CameraControl:
 
 
 camera1 = CameraControl()
-camera1.getRealTimeCamera()
+camera1.getRealTimeCamera(True)
+
+
 #camera1.client.loop_forever()
 
 
