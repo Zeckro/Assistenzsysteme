@@ -1,0 +1,24 @@
+[
+  {
+    "IPC": "C6015",
+    "Tasks": [
+      {
+        "Name": "Screw",
+        "Description": "Fasten screw A on the mainboard"
+      },
+	    {
+        "Name": "Solder",
+        "Description": "Weld component B onto the mainboard"
+      }
+    ]
+  },
+  {
+    "IPC": "CX-4060",
+    "Tasks": [
+      {
+        "Name": "Solder",
+        "Description": "Weld component A onto the casing"
+      }
+    ]
+  }
+]

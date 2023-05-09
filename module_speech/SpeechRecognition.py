@@ -78,7 +78,7 @@ class SpeechRecognition:
             stream.close()
             p.terminate()
             print("Finished playing audio")
-        except e:
+        except Exception as e:
             print("Error playing audio: ", e)
 
     def listen(self):
