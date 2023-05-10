@@ -4,12 +4,15 @@ import cv2
 import keras
 import tensorflow
 import numpy as np
+import os
+import pickle
 
 
 
 class CameraControl:
     #MQTT methods
     def on_connect(self,client, userdata, flags, rc):
+
         print("Connected with result code " + str(rc))
         client.subscribe("test/topic")
         client.subscribe("test2/topic")
@@ -27,11 +30,14 @@ class CameraControl:
         self.client.on_message = self.on_message
 
         self.client.connect("localhost", 1883, 60)
+        dir_path = os.path.dirname(os.path.realpath(__file__))  
+        self.path = os.path.join(dir_path, 'model0805_relativeTolWrist_small.h5')
+        self.model = keras.models.load_model(self.path)
 
-        self.model = keras.models.load_model('model0405_relativeTolWrist.h5')
-
-
-        self.actions = ["nextState","rest","screw","solder"] #better solution nec
+        with open('module_camera\\mappingActivity.pkl', 'rb') as f:
+            mappingActivity = pickle.load(f)
+            self.actions = [mappingActivity[i] for i in sorted(mappingActivity.keys(), reverse=False)]
+            print(self.actions)
 
     """
     def getRealTimeCamera(self,selectData):
