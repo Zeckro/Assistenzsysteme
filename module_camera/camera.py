@@ -6,6 +6,7 @@ import tensorflow
 import numpy as np
 import os
 import pickle
+import time
 
 
 
@@ -31,8 +32,9 @@ class CameraControl:
 
         self.client.connect("localhost", 1883, 60)
         dir_path = os.path.dirname(os.path.realpath(__file__))  
-        self.path = os.path.join(dir_path, 'model0805_relativeTolWrist_small.h5')
+        self.path = os.path.join(dir_path, 'model0905_relativeTolWrist_smallDropout.h5')
         self.model = keras.models.load_model(self.path)
+        self.sequence_length = self.model.layers[0].input_shape[1]
 
         with open('module_camera\\mappingActivity.pkl', 'rb') as f:
             mappingActivity = pickle.load(f)
@@ -95,6 +97,7 @@ class CameraControl:
         with mp_hand.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
             
             while cap.isOpened():
+                timeLoopBegin = time.time()
                 ret, frame = cap.read()
             
                 
@@ -152,11 +155,11 @@ class CameraControl:
                             datasettmp.append(i.x)
                             datasettmp.append(i.y)
                             datasettmp.append(i.z)
-                    if len(data) == 30:
+                    if len(data) == self.sequence_length:
                         data.pop(0)
                     data.append(datasettmp)
 
-                    if len(data) == 30:
+                    if len(data) == self.sequence_length:
                         prediction = self.model.predict(np.expand_dims(data,axis=0))[0]
                         print(self.actions[np.argmax(prediction)])
                     
@@ -165,7 +168,8 @@ class CameraControl:
                 
             
                 cv2.imshow('camera feed', image)
-                
+                timeLoopDif = time.time() - timeLoopBegin
+                print("FPS" + str(int(1/timeLoopDif)))
 
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
