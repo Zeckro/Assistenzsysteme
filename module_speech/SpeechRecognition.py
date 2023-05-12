@@ -12,14 +12,12 @@ class SpeechRecognition:
     #MQTT methods
     def on_connect(self,client, userdata, flags, rc):
         print("Connected with result code " + str(rc))
-        client.subscribe("test/topic")
-        client.subscribe("test2/topic")
+        client.subscribe("master/current_task")
 
     def on_message(self,client, userdata, msg):
-        if msg.topic == "test/topic":
-            print(msg.topic+" "+str(msg.payload))
-        elif msg.topic == "test2/topic":
-            print("Test2")
+        print("Message received: ")
+        if msg.topic == "master/current_task":
+            print(msg.payload)
         else:
             print(msg.topic+" "+str(msg.payload))
 
@@ -30,13 +28,16 @@ class SpeechRecognition:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.connect("localhost", 1883, 60)
+
         #TODO get task from server
         self.task = 0
         self.processor = pipeline(model="facebook/bart-large-mnli")
         end = time.time()
         print("MQTT-Client and Processing-Model initialised")
         print("Init took " + str(end-start) + " seconds")
-        self.listen()
+
+        self.listenTask = threading.Thread(target=SpeechRecognition.listen, args=(self,))
+        self.listenTask.start()
 
     # callback function
     def wake_word_callback(self, text):
@@ -118,4 +119,7 @@ class SpeechRecognition:
                     # error in google Speech recognition
                     print("Could not request results from Google Speech Recognition service; {0}".format(e))
 
-speechrecognition = SpeechRecognition()
+if __name__ == '__main__':
+    speechrecognition = SpeechRecognition()
+    speechrecognition.client.loop_forever()
+    speechrecognition.listenTask.stop()
