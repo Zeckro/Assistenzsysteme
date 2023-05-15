@@ -1,5 +1,7 @@
 test*.*
 *.mp3
+# praktikum/*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
