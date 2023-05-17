@@ -4,9 +4,16 @@ import threading
 import paho.mqtt.client as mqtt
 from transformers import pipeline
 import time
+import json
+from enum import Enum
 
 WAKE_WORD = "roxy"
 CONFIDENCE = 0.70
+TIMEOUT = 30
+
+class NextStep(Enum):
+    FORWARD = 1
+    BACKWARD = 2
 
 class SpeechRecognition:
     #MQTT methods
@@ -17,7 +24,12 @@ class SpeechRecognition:
     def on_message(self,client, userdata, msg):
         print("Message received: ")
         if msg.topic == "master/current_task":
-            print(msg.payload)
+            try:
+                payload = json.loads(msg.payload)
+                self.task = payload['task']
+                self.gotTask = True
+            except Exception as e:
+                print(e)
         else:
             print(msg.topic+" "+str(msg.payload))
 
@@ -29,13 +41,18 @@ class SpeechRecognition:
         self.client.on_message = self.on_message
         self.client.connect("localhost", 1883, 60)
 
-        #TODO get task from server
-        self.task = 0
+        self.gotTask = False        
         self.processor = pipeline(model="facebook/bart-large-mnli")
         end = time.time()
         print("MQTT-Client and Processing-Model initialised")
         print("Init took " + str(end-start) + " seconds")
-
+        start = time.time()
+        print("Waiting for task from master")
+        while(not self.gotTask):
+            if time.time() - start  >= TIMEOUT:
+                raise TimeoutError("Did not receive a task from master in specified timeout period (" + str(TIMEOUT) + " seconds)")
+            time.sleep(0.1)
+        self.is_listening = True
         self.listenTask = threading.Thread(target=SpeechRecognition.listen, args=(self,))
         self.listenTask.start()
 
@@ -47,24 +64,22 @@ class SpeechRecognition:
                 text,
                 candidate_labels=["forward", "backward", "other"],
             )
-            print(response)
+            #print(response)
             label = response["labels"][0]
             score = response["scores"][0]
             if(score > CONFIDENCE and not label =="other"):
-                self.publishTask(True if label == "forward" else False)
+                self.publishTask(NextStep.FORWARD if label == "forward" else NextStep.BACKWARD)
             else:
                 #other
                 pass
         except:
             print("Error processing text")
 
-    def publishTask(self, increment):
-        if increment:
-            payload =  str(self.task+1)
-        else:
-            payload = str(self.task-1)
-        print("publishing with payload: " + payload)
-        self.client.publish("speech_module/task", increment)
+    def publishTask(self, nextStep: NextStep):
+        new_task = self.task-1 if nextStep == NextStep.BACKWARD else self.task+1
+        payload = json.dumps({"current_task": self.task, "new_task": new_task})
+        print(payload)
+        self.client.publish("speech_module/task", payload, qos=2)
 
     def play_audio(self,audio_data):
         try:
@@ -93,7 +108,7 @@ class SpeechRecognition:
             r.energy_threshold = 1000  # TODO bringt das was?
             print("Listening for wake word...")
 
-            while True:
+            while self.is_listening:
                 # Listen for audio input
                 #audio = r.listen(source)
                 #TODO improve listening
@@ -122,4 +137,4 @@ class SpeechRecognition:
 if __name__ == '__main__':
     speechrecognition = SpeechRecognition()
     speechrecognition.client.loop_forever()
-    speechrecognition.listenTask.stop()
+    speechrecognition.is_listening = False #stops listen task
