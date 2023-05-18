@@ -3,11 +3,11 @@
     "IPC": "C6015",
     "Tasks": [
       {
-        "Name": "Screw",
+        "Name": "screw",
         "Description": "Fasten screw A on the mainboard"
       },
 	    {
-        "Name": "Solder",
+        "Name": "solder",
         "Description": "Weld component B onto the mainboard"
       }
     ]
@@ -16,7 +16,7 @@
     "IPC": "CX-4060",
     "Tasks": [
       {
-        "Name": "Solder",
+        "Name": "solder",
         "Description": "Weld component A onto the casing"
       }
     ]
