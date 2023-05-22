@@ -18,9 +18,10 @@ class Task:
     index: int
     name: str #solder, screw, ...
     description: str
-    
+    max_index: int
+
     def __str__(self):
-        return "Index: " + str(self.index) + "\t | Name: "+ self.name + "\t | Description: "+ self.description
+        return "Index: " + str(self.index) + "\t | Name: "+ self.name + "\t | Description: "+ self.description + " | Max_Index: " + str(self.max_index)
 
 class Master:
     def __init__(self):
@@ -34,22 +35,39 @@ class Master:
         self.currentAssemblyList = 0
         self.currentTask = 0
         print("Publish inital Task")
-        #self.client.publish("master/current_task",self.assemblyLists[self.currentAssemblyList].task[self.currentTask].to_json(), retain= True, qos=2)
-        self.client.publish("master/current_task",self.assemblyLists[self.currentAssemblyList].task[self.currentTask].to_json())
+        self.publishCurrentTask()
+        #self.client.publish("master/current_task",self.assemblyLists[self.currentAssemblyList].task[self.currentTask].to_json())
                             
         pass
+
+    def publishAssemblyList(self):
+        available = json.dumps({"Available IPCs": [str(i.name) for i in self.assemblyLists]})
+        self.client.publish("master/choose_list", payload=available, retain= True, qos= 2)
+
+    def publishCurrentTask(self):
+        self.client.publish("master/current_task",self.assemblyLists[self.currentAssemblyList].task[self.currentTask].to_json(), retain= True, qos=2)
     #MQTT methods
     def on_connect(self,client, userdata, flags, rc):
 
         print("Connected with result code " + str(rc))
-        client.subscribe("test/topic")
-        client.subscribe("test2/topic")
+        client.subscribe("submodule/+")
 
     def on_message(self,client, userdata, msg):
-        if msg.topic == "test/topic":
-            print(msg.topic+" "+str(msg.payload))
-        elif msg.topic == "test2/topic":
-            print("Test2")
+        if msg.topic == "submodule/task":
+            payload = json.loads(msg.payload)
+            if payload["current_task"] == self.currentTask:
+                if payload["new_task"] <= self.assemblyLists[self.currentAssemblyList].task[-1].index and payload["new_task"] >= 0:
+                    self.currentTask == payload["new_task"]
+                    self.publishCurrentTask()
+                else:
+                    self.publishAssemblyList()
+                    self.client.publish("master/current_task", payload="finished", retain= True, qos= 2)
+        elif msg.topic == "submodule/choose_list":
+            if payload < len(self.assemblyLists) and payload >=0:
+                self.currentAssemblyList = payload
+                self.publishCurrentTask()
+        else:
+            print("topic: " + str(msg.topic)+ " payload: " + str(msg.payload))
 
 
     def readAssembylLists(self):
@@ -61,7 +79,7 @@ class Master:
             assembyList = AssemblyList(name= ipc['IPC'],task= [])
 
             for i,task in enumerate(ipc['Tasks']):
-                assembyList.task.append( Task(index = i, name = task['Name'], description=task['Description']))
+                assembyList.task.append( Task(index = i, name = task['Name'], description=task['Description'], max_index= len(ipc['Tasks'])))
             
             assemblyLists.append(assembyList)
 
