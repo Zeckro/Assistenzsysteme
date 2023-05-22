@@ -28,6 +28,7 @@ class CameraControl:
             print(type(msg.payload))
             jsondict = json.loads(msg.payload)
             self.currentTask = jsondict["name"]
+            self.currentIndex = jsondict["index"]
         else:
             print(msg.topic+" "+str(msg.payload))
 
@@ -142,7 +143,7 @@ class CameraControl:
                             self.TaskPerformed = True
                         elif self.TaskPerformed and self.recognizedTask != self.currentTask:
                             self.TaskPerformed = False
-                            self.client.publish("master/next_task","NOT IMPLEMENTED YET")
+                            self.client.publish("submodule/task",json.dumps({"current_task": self.currentIndex, "new_task": self.currentIndex+1}),qos=1)
                             print("MQTT Publish was performed!")
 
                         _, img_encoded = cv2.imencode('.jpg', frame)
