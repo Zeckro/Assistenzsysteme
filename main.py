@@ -29,13 +29,13 @@ class Master:
         self.client = mqtt.Client()
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
-        self.client.connect("localhost", 1883, 60)
-
+        self.client.connect("192.168.137.1", 1883, 60)
+        
         #TODO dont hardcode
         self.currentAssemblyList = 0
         self.currentTask = 0
         print("Publish inital Task")
-        self.publishCurrentTask()
+        self.publishAssemblyList()
         #self.client.publish("master/current_task",self.assemblyLists[self.currentAssemblyList].task[self.currentTask].to_json())
                             
         pass
@@ -51,20 +51,21 @@ class Master:
 
         print("Connected with result code " + str(rc))
         client.subscribe("submodule/+")
+        client.subscribe("master/#")
 
     def on_message(self,client, userdata, msg):
         if msg.topic == "submodule/task":
             payload = json.loads(msg.payload)
             if payload["current_task"] == self.currentTask:
                 if payload["new_task"] <= self.assemblyLists[self.currentAssemblyList].task[-1].index and payload["new_task"] >= 0:
-                    self.currentTask == payload["new_task"]
+                    self.currentTask = payload["new_task"]
                     self.publishCurrentTask()
                 else:
                     self.publishAssemblyList()
                     self.client.publish("master/current_task", payload="finished", retain= True, qos= 2)
         elif msg.topic == "submodule/choose_list":
-            if payload < len(self.assemblyLists) and payload >=0:
-                self.currentAssemblyList = payload
+            if int(msg.payload) < len(self.assemblyLists) and int(msg.payload) >=0:
+                self.currentAssemblyList = int(msg.payload)
                 self.publishCurrentTask()
         else:
             print("topic: " + str(msg.topic)+ " payload: " + str(msg.payload))

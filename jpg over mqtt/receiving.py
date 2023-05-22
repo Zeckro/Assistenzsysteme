@@ -26,6 +26,6 @@ while True:
     # new frame?
     if latest_frame is not None:
         cv2.imshow("Received Frame", latest_frame)
-        cv2.waitKey(1)  # watis for delay
+        cv2.waitKey(1)  # waits for delay
         latest_frame = None
 
