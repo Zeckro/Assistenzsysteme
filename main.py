@@ -26,7 +26,7 @@ class Task:
 class Master:
     def __init__(self):
         self.assemblyLists = self.readAssembylLists()
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(client_id="master")
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.connect("192.168.137.1", 1883, 60)
