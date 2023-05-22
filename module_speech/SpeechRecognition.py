@@ -10,6 +10,8 @@ from enum import Enum
 WAKE_WORD = "roxy"
 CONFIDENCE = 0.70
 TIMEOUT = 30
+forward_labels = ["forward", "next"]
+backward_labels = ["backward", "previous"]
 
 class NextStep(Enum):
     FORWARD = 1
@@ -52,9 +54,9 @@ class SpeechRecognition:
             if time.time() - start  >= TIMEOUT:
                 raise TimeoutError("Did not receive a task from master in specified timeout period (" + str(TIMEOUT) + " seconds)")
             time.sleep(0.1)
-        self.is_listening = True
-        self.listenTask = threading.Thread(target=SpeechRecognition.listen, args=(self,))
-        self.listenTask.start()
+        t = threading.Thread(target=SpeechRecognition.listen, args=(self,))
+        t.daemon = True
+        t.start()
 
     # callback function
     def wake_word_callback(self, text):
@@ -62,13 +64,20 @@ class SpeechRecognition:
             print("Wake word detected! Processing text: "+text)
             response = self.processor(
                 text,
-                candidate_labels=["forward", "backward", "other"],
+                candidate_labels= forward_labels + backward_labels + ["other"],
             )
             #print(response)
-            label = response["labels"][0]
-            score = response["scores"][0]
-            if(score > CONFIDENCE and not label =="other"):
-                self.publishTask(NextStep.FORWARD if label == "forward" else NextStep.BACKWARD)
+            forward_confidence = 0
+            backward_confidence = 0
+            for i, label in enumerate(response["labels"]):
+                if(label in forward_labels):
+                    forward_confidence += (response["scores"][i])
+                if(label in backward_labels):
+                    backward_confidence += (response["scores"][i])
+
+            #if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE and not response["labels"][0] =="other"):
+            if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE):
+                self.publishTask(NextStep.FORWARD if label in forward_labels else NextStep.BACKWARD)
             else:
                 #other
                 pass
@@ -108,13 +117,14 @@ class SpeechRecognition:
             r.energy_threshold = 1000  # TODO bringt das was?
             print("Listening for wake word...")
 
-            while self.is_listening:
+            while True:
                 # Listen for audio input
                 #audio = r.listen(source)
                 #TODO improve listening
                 audio = r.listen(source,5,5)
                 # DEBUG -- play audio in separate thread
                 #t = threading.Thread(target=SpeechRecognition.play_audio, args=(self,audio,))
+                #t.deamon = True
                 #t.start()
 
                 try:
@@ -126,6 +136,7 @@ class SpeechRecognition:
                         #only process text after wake word
                         text = text.partition(WAKE_WORD)[2]
                         t = threading.Thread(target=SpeechRecognition.wake_word_callback, args=(self,text,))
+                        t.daemon = True
                         t.start()
                 except sr.UnknownValueError:
                     # audio not recognised
@@ -137,4 +148,3 @@ class SpeechRecognition:
 if __name__ == '__main__':
     speechrecognition = SpeechRecognition()
     speechrecognition.client.loop_forever()
-    speechrecognition.is_listening = False #stops listen task
