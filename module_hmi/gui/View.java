@@ -3,18 +3,16 @@ package gui;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JPanel;
@@ -38,20 +36,23 @@ public class View extends JFrame {
 	private JTextField tfTaskTitle;
 	private JButton btnNext, btnNextStep;
 	private JComboBox<String> cb;
-	private ArrayList<Task[]> tasks = new ArrayList<>();
-	private ArrayList<String> tasksName = new ArrayList<>();
-	private Task[] currentTasks;
-	private String image = "image.jpg";
+//	private ArrayList<Task[]> tasks = new ArrayList<>();
+//	private ArrayList<String> tasksName = new ArrayList<>();
+	private IPC[] arrayIPCs = {new IPC("C6015"), new IPC("CX-4060")};
+//	private String image = "image.jpg";
+//	private byte[] imageBytes;
+	private JLabel imageLabel = new JLabel();
+	private JLabel imageLabel2 = new JLabel();
 
 	// Konstruktor
 	public View(Model model) {
 		this.model = model;
-		Task[] test = {new Task("Test1S1", "Schritt 1 von Test1"), new Task("Test1S2", "Schritt 2 von Test1")};
-		tasks.add(test);
-		tasksName.add("Test 1");
-		Task[] test2 = {new Task("Test2S1", "Schritt 1 von Test2"), new Task("Test2S2", "Schritt 2 von Test2"), new Task("Test2S3", "Schritt 3 von Test2")};
-		tasks.add(test2);
-		tasksName.add("Test 2");
+//		Task[] test = {new Task("Test1S1", "Schritt 1 von Test1"), new Task("Test1S2", "Schritt 2 von Test1")};
+//		tasks.add(test);
+//		tasksName.add("Test 1");
+//		Task[] test2 = {new Task("Test2S1", "Schritt 1 von Test2"), new Task("Test2S2", "Schritt 2 von Test2"), new Task("Test2S3", "Schritt 3 von Test2")};
+//		tasks.add(test2);
+//		tasksName.add("Test 2");
 		
 		cardLayout = new CardLayout(0, 0);
 		setOutputTxtAreas();
@@ -89,7 +90,9 @@ public class View extends JFrame {
 		tfTaskTitle.setText("");
 		tfTaskTitle.setHorizontalAlignment(SwingConstants.CENTER);
 		taskInfo.add(tfTaskTitle, BorderLayout.NORTH);
-		taskInfo.add(new ImagePanel(image), BorderLayout.CENTER);
+		JPanel imagePanel = new JPanel();
+		imagePanel.add(imageLabel2);
+		taskInfo.add(imagePanel, BorderLayout.CENTER);
 		tasksPanel.add(taskInfo);
 		JPanel southAreaTasks = createBackNextButtonsOutputPanel(txtOutputTasks);
 		tasksPanel.add(southAreaTasks, BorderLayout.SOUTH);
@@ -99,6 +102,8 @@ public class View extends JFrame {
 		setLocation(250, 60);
 		setBounds(100, 100, 450, 310);
 		setVisible(true);
+		
+		model.mqttConnectAndSubscribe();
 	}
 
 	// Getters/Setters
@@ -110,34 +115,48 @@ public class View extends JFrame {
 		return cardLayout;
 	}
 
+//	/**
+//	 * @return the currentTasks
+//	 */
+//	public ArrayList<Task[]> getTasks() {
+//		return tasks;
+//	}
+//
+//	/**
+//	 * @param tasks the tasks to set
+//	 */
+//	public void setTasks(ArrayList<Task[]> tasks) {
+//		this.tasks = tasks;
+//	}
+//
+//	/**
+//	 * @return the currentTasks
+//	 */
+//	public Task[] getCurrentTasks() {
+//		return currentTasks;
+//	}
+//
+//	/**
+//	 * @param currentTasks the currentTasks to set
+//	 */
+//	public void setCurrentTasks(Task[] currentTasks) {
+//		this.currentTasks = currentTasks;
+//	}
+	
 	/**
-	 * @return the currentTasks
+	 * @return the arrayIPCs
 	 */
-	public ArrayList<Task[]> getTasks() {
-		return tasks;
+	public IPC[] getArrayIPCs() {
+		return arrayIPCs;
 	}
-
+	
 	/**
-	 * @param tasks the tasks to set
+	 * @param ipcs the arrayIPCs to set
 	 */
-	public void setTasks(ArrayList<Task[]> tasks) {
-		this.tasks = tasks;
+	public void setArrayIPCs(IPC[] ipcs) {
+		this.arrayIPCs = ipcs;
 	}
-
-	/**
-	 * @return the currentTasks
-	 */
-	public Task[] getCurrentTasks() {
-		return currentTasks;
-	}
-
-	/**
-	 * @param currentTasks the currentTasks to set
-	 */
-	public void setCurrentTasks(Task[] currentTasks) {
-		this.currentTasks = currentTasks;
-	}
-
+	
 	/**
 	 * @return the tfInputOptionOne
 	 */
@@ -164,6 +183,21 @@ public class View extends JFrame {
 	 */
 	public JButton getBtnNextStep() {
 		return btnNextStep;
+	}
+
+	/**
+	 * @return the imageLabel
+	 */
+	public JLabel getImageLabel() {
+		return imageLabel;
+	}
+
+	/**
+	 * @param imageLabel the imageLabel to set
+	 */
+	public void setImageLabel(ImageIcon icon) {
+	    this.imageLabel.setIcon(icon);
+	    this.imageLabel2.setIcon(icon);
 	}
 
 	// Methoden
@@ -221,13 +255,15 @@ public class View extends JFrame {
 	public JPanel createOptionsPanel() {
 		JPanel panel = new JPanel();
 		panel.setLayout(new BorderLayout(3,3));
-		String array[] = new String[tasksName.size()];
-		for (int i = 0; i < tasksName.size(); i++) {
-			array[i]=(tasksName.get(i));
+		String array[] = new String[arrayIPCs.length];
+		for (int i = 0; i < array.length; i++) {
+			array[i] = arrayIPCs[i].getName();
 		}
 		cb = new JComboBox<String>(array);
 		panel.add(cb, BorderLayout.NORTH);
-		panel.add(new ImagePanel("image.jpg"), BorderLayout.CENTER);
+		JPanel imagePanel = new JPanel();
+		imagePanel.add(imageLabel);
+		panel.add(imagePanel, BorderLayout.CENTER);
 		return panel;
 	}
 	
@@ -241,13 +277,16 @@ public class View extends JFrame {
 		JScrollPane scrollTxt = new JScrollPane(txtOutputMenu); // Scrollbare TextArea, falls Text zu lang
 		btnNext = new JButton("Weiter");
 		btnNext.addActionListener(new nextButtonControl(model));
+		Dimension btnSize = btnNext.getPreferredSize();
+        btnSize.height = 50; // bevorzugte Höhe setzen
+        btnNext.setPreferredSize(btnSize);
 		panel.setLayout(new GridBagLayout());
 		// Layout für Weiter-Button definieren
 		constraints.fill = GridBagConstraints.HORIZONTAL;
 		constraints.ipady = 0;
 		constraints.weightx = 0.5;
 		constraints.gridx = 0;
-		constraints.gridy = 0;
+		constraints.gridy = 1;
 		constraints.insets = new Insets(10, 10, 10, 10);
 		constraints.anchor = GridBagConstraints.PAGE_END;
 		panel.add(btnNext, constraints); // Button mit Constraints hinzufügen
@@ -255,7 +294,7 @@ public class View extends JFrame {
 		constraints.fill = GridBagConstraints.HORIZONTAL;
 		constraints.ipady = 0;
 		constraints.gridx = 0;
-		constraints.gridy = 1;
+		constraints.gridy = 0;
 		panel.add(scrollTxt, constraints); // ScrollPane mit Constraints zum Panel hinzufügen
 		return panel;
 	}
@@ -271,9 +310,15 @@ public class View extends JFrame {
 		JButton btnBack = new JButton("Zurück");
 		btnBack.setEnabled(true);
 		btnBack.addActionListener(new backButtonControl(model));
+		Dimension btnSize = btnBack.getPreferredSize();
+        btnSize.height = 50; // bevorzugte Höhe setzen
+        btnBack.setPreferredSize(btnSize);
 		btnNextStep = new JButton("Weiter");
 		btnNextStep.setEnabled(true);
 		btnNextStep.addActionListener(new nextButtonTaskControl(model));
+//		btnSize = btnNextStep.getPreferredSize();
+//        btnSize.height = 50; // bevorzugte Höhe setzen
+        btnNextStep.setPreferredSize(btnSize);
 		panel.setLayout(new GridBagLayout());
 		// Layout für Zurück-Button definieren
 		constraints.fill = GridBagConstraints.HORIZONTAL;
@@ -310,54 +355,5 @@ public class View extends JFrame {
 	public void switchToPanel(String panel) {
 		cardLayout.show(getContentPane(), panel);
 		refresh();
-	}
-	
-	public class ImagePanel extends JPanel{
-
-	    private static final long serialVersionUID = 1L;
-		private ImageIcon icon;
-		private double imageScale = 1.0; // Initial image scale
-
-	    public ImagePanel(String path) {
-	       try {
-	          icon = new ImageIcon(path);
-	          int width = icon.getImage().getWidth(null)/2;
-	          int height = icon.getImage().getHeight(null)/2;
-	          setPreferredSize(new Dimension(width, height));
-	       } catch (Exception ex) {
-	            // handle exception...
-	       }
-	       
-	       addComponentListener(new ComponentAdapter() {
-	            @Override
-	            public void componentResized(ComponentEvent e) {
-	                // Adjust the image scale to fit the panel size
-	                int panelWidth = getWidth();
-	                int panelHeight = getHeight();
-	                int imageWidth = icon.getIconWidth();
-	                int imageHeight = icon.getIconHeight();
-
-	                double widthScale = (double) panelWidth / imageWidth;
-	                double heightScale = (double) panelHeight / imageHeight;
-	                imageScale = Math.min(widthScale, heightScale);
-
-	                repaint();
-	            }
-	        });
-	    }
-
-	    @Override
-	    protected void paintComponent(Graphics g) {
-	    	super.paintComponent(g);
-	        if (icon != null) {
-	            int width = (int) (icon.getIconWidth() * imageScale);
-	            int height = (int) (icon.getIconHeight() * imageScale);
-	            int x = (getWidth() - width) / 2;
-	            int y = (getHeight() - height) / 2;
-
-	            g.drawImage(icon.getImage(), x, y, width, height, null);
-	        }
-	    }
-
 	}
 }
