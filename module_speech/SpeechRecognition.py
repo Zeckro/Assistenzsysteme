@@ -88,7 +88,7 @@ class SpeechRecognition:
         new_task = self.task-1 if nextStep == NextStep.BACKWARD else self.task+1
         payload = json.dumps({"current_task": self.task, "new_task": new_task})
         print(payload)
-        self.client.publish("speech_module/task", payload, qos=2)
+        self.client.publish("submodule/task", payload, qos=1)
 
     def play_audio(self,audio_data):
         try:
