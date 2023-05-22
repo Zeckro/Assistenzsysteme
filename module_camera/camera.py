@@ -37,7 +37,7 @@ class CameraControl:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
 
-        self.client.connect("localhost", 1883, 60)
+        self.client.connect("192.168.137.1", 1883, 60)
         dir_path = os.path.dirname(os.path.realpath(__file__))  
         self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_bigDensedropout.h5')
         self.model = keras.models.load_model(self.path)
