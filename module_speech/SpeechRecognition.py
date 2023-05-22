@@ -10,8 +10,10 @@ from enum import Enum
 WAKE_WORD = "roxy"
 CONFIDENCE = 0.70
 TIMEOUT = 30
-forward_labels = ["forward", "next"]
-backward_labels = ["backward", "previous"]
+#forward_labels = ["forward", "next"]
+forward_labels = ["step forward"]
+#backward_labels = ["backward", "previous"]
+backward_labels = ["step backward"]
 
 class NextStep(Enum):
     FORWARD = 1
@@ -26,9 +28,10 @@ class SpeechRecognition:
     def on_message(self,client, userdata, msg):
         print("Message received: ")
         if msg.topic == "master/current_task":
+            print(msg.topic+" "+str(msg.payload))
             try:
                 payload = json.loads(msg.payload)
-                self.task = payload['task']
+                self.task = payload['index']
                 self.gotTask = True
             except Exception as e:
                 print(e)
@@ -38,22 +41,22 @@ class SpeechRecognition:
     def __init__(self):
         print("Initializing...")
         start = time.time()
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(client_id="speech")
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
-        self.client.connect("localhost", 1883, 60)
+        self.client.connect("192.168.137.1", 1883, 60)
 
-        self.gotTask = False        
-        self.processor = pipeline(model="facebook/bart-large-mnli")
+        self.gotTask = False
+        self.processor = pipeline(model="facebook/bart-large-mnli", normalize_scores = False)
         end = time.time()
         print("MQTT-Client and Processing-Model initialised")
         print("Init took " + str(end-start) + " seconds")
         start = time.time()
         print("Waiting for task from master")
-        while(not self.gotTask):
-            if time.time() - start  >= TIMEOUT:
-                raise TimeoutError("Did not receive a task from master in specified timeout period (" + str(TIMEOUT) + " seconds)")
-            time.sleep(0.1)
+        #while(not self.gotTask):
+        #    if time.time() - start  >= TIMEOUT:
+        #        raise TimeoutError("Did not receive a task from master in specified timeout period (" + str(TIMEOUT) + " seconds)")
+        #    time.sleep(0.1)
         t = threading.Thread(target=SpeechRecognition.listen, args=(self,))
         t.daemon = True
         t.start()
@@ -64,9 +67,10 @@ class SpeechRecognition:
             print("Wake word detected! Processing text: "+text)
             response = self.processor(
                 text,
-                candidate_labels= forward_labels + backward_labels + ["other"],
+                #candidate_labels= forward_labels + backward_labels + ["other"],
+                candidate_labels= forward_labels + backward_labels,
             )
-            #print(response)
+            print(response)
             forward_confidence = 0
             backward_confidence = 0
             for i, label in enumerate(response["labels"]):
@@ -77,7 +81,7 @@ class SpeechRecognition:
 
             #if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE and not response["labels"][0] =="other"):
             if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE):
-                self.publishTask(NextStep.FORWARD if label in forward_labels else NextStep.BACKWARD)
+                self.publishTask(NextStep.FORWARD if response["labels"][0] in forward_labels else NextStep.BACKWARD)
             else:
                 #other
                 pass
@@ -118,32 +122,35 @@ class SpeechRecognition:
             print("Listening for wake word...")
 
             while True:
-                # Listen for audio input
-                #audio = r.listen(source)
-                #TODO improve listening
-                audio = r.listen(source,5,5)
-                # DEBUG -- play audio in separate thread
-                #t = threading.Thread(target=SpeechRecognition.play_audio, args=(self,audio,))
-                #t.deamon = True
-                #t.start()
+                if self.gotTask:
+                    # Listen for audio input
+                    #audio = r.listen(source)
+                    #TODO improve listening
+                    audio = r.listen(source,5,5)
+                    # DEBUG -- play audio in separate thread
+                    #t = threading.Thread(target=SpeechRecognition.play_audio, args=(self,audio,))
+                    #t.deamon = True
+                    #t.start()
 
-                try:
-                    #  google speech recognitoin TODO funktionieren die andere besser?
-                    text = r.recognize_google(audio).lower()
-                    print(text)
-                    # Check if the wake word is in the transcribed text
-                    if WAKE_WORD in text:
-                        #only process text after wake word
-                        text = text.partition(WAKE_WORD)[2]
-                        t = threading.Thread(target=SpeechRecognition.wake_word_callback, args=(self,text,))
-                        t.daemon = True
-                        t.start()
-                except sr.UnknownValueError:
-                    # audio not recognised
-                    print("Could not understand audio")
-                except sr.RequestError as e:
-                    # error in google Speech recognition
-                    print("Could not request results from Google Speech Recognition service; {0}".format(e))
+                    try:
+                        #  google speech recognitoin TODO funktionieren die andere besser?
+                        text = r.recognize_google(audio).lower()
+                        print(text)
+                        # Check if the wake word is in the transcribed text
+                        if WAKE_WORD in text:
+                            #only process text after wake word
+                            text = text.partition(WAKE_WORD)[2]
+                            t = threading.Thread(target=SpeechRecognition.wake_word_callback, args=(self,text,))
+                            t.daemon = True
+                            t.start()
+                    except sr.UnknownValueError:
+                        # audio not recognised
+                        print("Could not understand audio")
+                    except sr.RequestError as e:
+                        # error in google Speech recognition
+                        print("Could not request results from Google Speech Recognition service; {0}".format(e))
+                    else:
+                        time.sleep(0.1)
 
 if __name__ == '__main__':
     speechrecognition = SpeechRecognition()
