@@ -25,25 +25,36 @@ class CameraControl:
         print("Message received: ")
         if msg.topic == "master/current_task":
             print(msg.payload)
-            print(type(msg.payload))
-            jsondict = json.loads(msg.payload)
-            self.currentTask = jsondict["name"]
-            self.currentIndex = jsondict["index"]
+            #print(type(msg.payload))
+            try:
+                jsondict = json.loads(msg.payload)
+                self.currentTask = jsondict["name"]
+                self.currentIndex = jsondict["index"]
+            except:
+                print("Test")
+                
+                #raise TypeError("Could not read json") 
         else:
             print(msg.topic+" "+str(msg.payload))
 
     def __init__(self):
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(client_id="camera")
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
 
-        self.client.connect("192.168.137.1", 1883, 60)
+        self.client.connect("localhost", 1883, 60)
         dir_path = os.path.dirname(os.path.realpath(__file__))  
         self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_bigDensedropout.h5')
-        self.model = keras.models.load_model(self.path)
-        self.sequence_length = self.model.layers[0].input_shape[1]
+        try:
+            self.model = keras.models.load_model(self.path)
+            self.sequence_length = self.model.layers[0].input_shape[1]
+        except:
+            raise Exception("Could not load task recognition model") 
         self.TaskPerformed = False
+        self.timerStarted = False
         self.currentTask = ""
+
+        self.client.publish("submodule/task","0")
 
         with open('module_camera\\mappingActivity.pkl', 'rb') as f:
             mappingActivity = pickle.load(f)
@@ -58,7 +69,7 @@ class CameraControl:
     def get_Camera_Activity(self,relativeCoordinates=True,relativeTolwrist=True):
         mp_drawing = mp.solutions.drawing_utils
         mp_hand = mp.solutions.hands
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
         # Initiate holistic model
         data = []
         
@@ -99,10 +110,6 @@ class CameraControl:
                                 datasettmp.append(i.x - dataset[0][0].x)
                                 datasettmp.append(i.y - dataset[0][0].y)
                                 datasettmp.append(i.z)
-                            #tmpx = datasettmp[0]
-                            #tmpy = datasettmp[1]
-                            #datasettmp = [datasettmp[i] - tmpx for i in range(0,len(datasettmp),3)]
-                            #datasettmp = [datasettmp[i+1] - tmpy for i in range(0,len(datasettmp),3)]
                         else:
                             tmpCnt = 0
                             for i in dataset[0]:
@@ -132,38 +139,45 @@ class CameraControl:
 
                     timeDataPreProcessing = time.time() - timeLoopBegin
 
-                    if len(data) == self.sequence_length and self.currentTask != "":
+                    if len(data) == self.sequence_length and self.currentTask != "" and self.currentTask != "finished":
                         prediction = self.model.predict(np.expand_dims(data,axis=0))[0]
                         self.recognizedTask = self.actions[np.argmax(prediction)]
 
                         timeTaskPredicition = time.time() - timeLoopBegin
 
                         print( "Recognition: " + self.recognizedTask + " ---- Task of Assembly List: " + self.currentTask)
-                        if self.recognizedTask == self.currentTask:
-                            self.TaskPerformed = True
-                        elif self.TaskPerformed and self.recognizedTask != self.currentTask:
+  
+                        if self.recognizedTask == self.currentTask or self.recognizedTask == "nextState":
+                            #waiting for successfully recognized task (at least 2 seconds)
+                            if time.time() - self.timeCorrectTask > 2.0:
+                                self.TaskPerformed = True
+                        elif self.TaskPerformed and self.recognizedTask != self.currentTask:    #if task successfully performend and finished
                             self.TaskPerformed = False
+                            self.timeCorrectTask = time.time()
                             self.client.publish("submodule/task",json.dumps({"current_task": self.currentIndex, "new_task": self.currentIndex+1}),qos=1)
                             print("MQTT Publish was performed!")
+                        elif self.recognizedTask != self.currentTask and self.recognizedTask != "nextState":
+                            self.timeCorrectTask = time.time()
+
 
                         _, img_encoded = cv2.imencode('.jpg', frame)
                         byte_array = img_encoded.tobytes()
                         self.client.publish("image_topic", byte_array)
 
                         timeImageSending = time.time() - timeLoopBegin
-                        print("Timing")
-                        print("Image Ac.: "+str(timeImageAcquisition) 
-                              + " Pose Est.: "+str(timeImagePoseEst-timeImageAcquisition)
-                              + " Preproc: "+str(timeDataPreProcessing-timeImagePoseEst)
-                              + " Task Pred.: "+str(timeTaskPredicition-timeDataPreProcessing)
-                              + " Sending: "+str(timeImageSending-timeTaskPredicition))
+                        #print("Timing")
+                        #print("Image Ac.: "+str(timeImageAcquisition) 
+                        #      + " Pose Est.: "+str(timeImagePoseEst-timeImageAcquisition)
+                        #      + " Preproc: "+str(timeDataPreProcessing-timeImagePoseEst)
+                        #      + " Task Pred.: "+str(timeTaskPredicition-timeDataPreProcessing)
+                        #      + " Sending: "+str(timeImageSending-timeTaskPredicition))
 
                     
                     
                 #os.system('cls')
                 
             
-                #cv2.imshow('camera feed', image)
+                cv2.imshow('camera feed', image)
                 #timeLoopDif = time.time() - timeLoopBegin
                 #print("FPS" + str(int(1/timeLoopDif)))
 
