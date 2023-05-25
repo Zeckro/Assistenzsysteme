@@ -6,7 +6,6 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -38,7 +37,7 @@ public class View extends JFrame {
 	private JComboBox<String> cb;
 //	private ArrayList<Task[]> tasks = new ArrayList<>();
 //	private ArrayList<String> tasksName = new ArrayList<>();
-	private IPC[] arrayIPCs = {new IPC("C6015"), new IPC("CX-4060")};
+	private String[] ipcs = {"No IPCs available"};
 //	private String image = "image.jpg";
 //	private byte[] imageBytes;
 	private JLabel imageLabel = new JLabel();
@@ -47,12 +46,6 @@ public class View extends JFrame {
 	// Konstruktor
 	public View(Model model) {
 		this.model = model;
-//		Task[] test = {new Task("Test1S1", "Schritt 1 von Test1"), new Task("Test1S2", "Schritt 2 von Test1")};
-//		tasks.add(test);
-//		tasksName.add("Test 1");
-//		Task[] test2 = {new Task("Test2S1", "Schritt 1 von Test2"), new Task("Test2S2", "Schritt 2 von Test2"), new Task("Test2S3", "Schritt 3 von Test2")};
-//		tasks.add(test2);
-//		tasksName.add("Test 2");
 		
 		cardLayout = new CardLayout(0, 0);
 		setOutputTxtAreas();
@@ -144,17 +137,17 @@ public class View extends JFrame {
 //	}
 	
 	/**
-	 * @return the arrayIPCs
+	 * @return the ipcs
 	 */
-	public IPC[] getArrayIPCs() {
-		return arrayIPCs;
+	public String[] getIpcs() {
+		return ipcs;
 	}
 	
 	/**
-	 * @param ipcs the arrayIPCs to set
+	 * @param ipcs the ipcs to set
 	 */
-	public void setArrayIPCs(IPC[] ipcs) {
-		this.arrayIPCs = ipcs;
+	public void setIpcs(String[] ipcs) {
+		this.ipcs = ipcs;
 	}
 	
 	/**
@@ -255,11 +248,7 @@ public class View extends JFrame {
 	public JPanel createOptionsPanel() {
 		JPanel panel = new JPanel();
 		panel.setLayout(new BorderLayout(3,3));
-		String array[] = new String[arrayIPCs.length];
-		for (int i = 0; i < array.length; i++) {
-			array[i] = arrayIPCs[i].getName();
-		}
-		cb = new JComboBox<String>(array);
+		cb = new JComboBox<String>(ipcs);
 		panel.add(cb, BorderLayout.NORTH);
 		JPanel imagePanel = new JPanel();
 		imagePanel.add(imageLabel);

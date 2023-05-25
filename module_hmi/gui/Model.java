@@ -2,7 +2,6 @@ package gui;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -15,6 +14,7 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 public class Model {
 	// View des Programms
@@ -70,11 +70,11 @@ public class Model {
 			    	String msgStr = new String(message.getPayload());
 			        System.out.println(topic + ": " + msgStr);
 			        JSONObject json = new JSONObject(msgStr);
-			        /*IPC[] ipcs = {new IPC(
-			        		(String) json.get("name")
-			        )};
-			        view.setArrayIPCs(ipcs);*/
-			        publishAssemblyIndex(0);
+			        JSONArray ipcs = json.getJSONArray("Available IPCs");
+			        view.getComboBox().removeAllItems();
+			        for (int i = 0; i < ipcs.length(); i++) {
+			            view.getComboBox().addItem(ipcs.getString(i));
+			        }
 			        view.refresh();
 			    }
 			});
@@ -104,7 +104,7 @@ public class Model {
 
 					try (ByteArrayInputStream bis = new ByteArrayInputStream(msg)) {
 						image = ImageIO.read(bis);
-					} catch (IOException e) {
+					} catch (Exception e) {
 						e.printStackTrace();
 					}
 
