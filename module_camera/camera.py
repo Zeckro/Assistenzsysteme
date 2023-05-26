@@ -42,7 +42,7 @@ class CameraControl:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
 
-        self.client.connect("192.168.56.1", 1883, 60)
+        self.client.connect("192.168.137.1", 1883, 60)
         dir_path = os.path.dirname(os.path.realpath(__file__))  
         self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_bigDensedropout.h5')
         try:
@@ -157,11 +157,6 @@ class CameraControl:
                         elif self.recognizedTask != self.currentTask and self.recognizedTask != "nextState":
                             self.timeCorrectTask = time.time()
 
-
-                        _, img_encoded = cv2.imencode('.jpg', frame)
-                        byte_array = img_encoded.tobytes()
-                        self.client.publish("image_topic", byte_array)
-
                         timeImageSending = time.time() - timeLoopBegin
                         #print("Timing")
                         #print("Image Ac.: "+str(timeImageAcquisition) 
@@ -182,7 +177,11 @@ class CameraControl:
                     
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
-
+                
+                _, img_encoded = cv2.imencode('.jpg', frame)
+                byte_array = img_encoded.tobytes()
+                self.client.publish("image_topic", byte_array)
+                
         cap.release()
         cv2.destroyAllWindows()
         return data
