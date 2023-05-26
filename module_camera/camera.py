@@ -42,7 +42,7 @@ class CameraControl:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
 
-        self.client.connect("localhost", 1883, 60)
+        self.client.connect("192.168.56.1", 1883, 60)
         dir_path = os.path.dirname(os.path.realpath(__file__))  
         self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_bigDensedropout.h5')
         try:
@@ -53,8 +53,6 @@ class CameraControl:
         self.TaskPerformed = False
         self.timerStarted = False
         self.currentTask = ""
-
-        self.client.publish("submodule/task","0")
 
         with open('module_camera\\mappingActivity.pkl', 'rb') as f:
             mappingActivity = pickle.load(f)
@@ -69,7 +67,7 @@ class CameraControl:
     def get_Camera_Activity(self,relativeCoordinates=True,relativeTolwrist=True):
         mp_drawing = mp.solutions.drawing_utils
         mp_hand = mp.solutions.hands
-        cap = cv2.VideoCapture(1)
+        cap = cv2.VideoCapture(0)
         # Initiate holistic model
         data = []
         
