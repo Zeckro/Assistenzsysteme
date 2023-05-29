@@ -83,15 +83,19 @@ public class Model {
 			    public void messageArrived(String topic, MqttMessage message) throws Exception {
 			    	String msgStr = new String(message.getPayload());
 			        System.out.println(topic + ": " + msgStr);
-			        JSONObject json = new JSONObject(msgStr);
-			        currentTask = new Task(
-			        		(int) json.get("index"), 
-			        		(String) json.get("name"), 
-			        		(String) json.get("description"),
-			        		(int) json.getInt("max_index")
-			        );
-			        taskStep = currentTask.getIndex();
-			        switchPanel();
+			        if (msgStr.equals("finished")) {
+			        	toMenuPanel();
+			        } else {
+				        JSONObject json = new JSONObject(msgStr);
+				        currentTask = new Task(
+				        		(int) json.get("index"), 
+				        		(String) json.get("name"), 
+				        		(String) json.get("description"),
+				        		(int) json.getInt("max_index")
+				        );
+				        taskStep = currentTask.getIndex();
+				        switchPanel();
+			        }
 			        view.refresh();
 			    }
 			});
@@ -142,13 +146,16 @@ public class Model {
 	 * Wechselt je nach Combobox-Auswahl zum richtigen Panel.
 	 */
 	public void switchPanel() {
-		if (currentTask != null) {
+		if (taskStep == -1) {
+			publishAssemblyIndex(view.getComboBox().getSelectedIndex());
+//			setNameAndDescription();
+			view.getBtnNextStep().setText("Weiter");
+//			view.switchToPanel("Tasks");
+		} else if (currentTask != null && taskStep >= 0) {
 			setNameAndDescription();
 			view.getBtnNextStep().setText("Weiter");
 			view.switchToPanel("Tasks");
-		}/* else if (view.getCurrentTasks() != null && taskIndex > 0) {
-			
-		}*/ else {
+		} else {
 			displayOutput = "Ein Fehler ist aufgetreten.";
 			view.switchToPanel("Menu");
 		}
@@ -159,8 +166,8 @@ public class Model {
 	 * @param next True setzen wenn zum nächsten Schritt der Task, false wenn zum vorherigen Schritt.
 	 */
 	public void switchPanel(boolean next) {
-		if (currentTask != null && taskStep > 0 && next) {
-			publishStep(taskStep, taskStep++);
+		if (currentTask != null && taskStep > -1 && next) {
+			publishStep(taskStep, ++taskStep);
 			if (taskStep > currentTask.getMaxIndex()) {
 				toMenuPanel();
 			} else {
@@ -170,8 +177,8 @@ public class Model {
 				}
 				view.refresh();
 			}
-		} else if (currentTask != null && taskStep > 0 && !next) {
-			publishStep(taskStep, taskStep--);
+		} else if (currentTask != null && taskStep > -1 && !next) {
+			publishStep(taskStep, --taskStep);
 			if (taskStep == -1) {
 				toMenuPanel();
 				displayOutput = "IPC ist fertig. Einen neuen IPC auswählen.";
@@ -190,7 +197,7 @@ public class Model {
 	 * Wechselt zum Hauptmenü-Panel.
 	 */
 	public void toMenuPanel() {
-		taskStep = 0;
+		taskStep = -1;
 		displayOutput = "Durch Auswahl eines der Aufgaben und Klicken auf 'Weiter' "
 				+ "können die verschiedenen Funktionen genutzt werden.";
 		view.switchToPanel("Menu");
@@ -201,7 +208,7 @@ public class Model {
 	 */
 	public void setNameAndDescription() {
 		view.getTfTaskTitle().setText(
-				currentTask.getIndex() + " von " + currentTask.getMaxIndex()
+				currentTask.getIndex()+1 + " von " + (currentTask.getMaxIndex()+1)
 					+ ": " + currentTask.getName()
 		);
 		displayOutput = currentTask.getDescription();
@@ -211,7 +218,7 @@ public class Model {
 		try {
 			client.publish(
 					"submodule/task", 
-					("{current_task: " + currentIndex + ", new_task: " + nextIndex + "}").getBytes(), 
+					("{\"current_task\": " + currentIndex + ", \"new_task\": " + nextIndex + "}").getBytes(),
 					1, true
 			);
 		} catch (Exception e) {
