@@ -54,6 +54,7 @@ class Master:
         client.subscribe("master/#")
 
     def on_message(self,client, userdata, msg):
+        print("topic: " + str(msg.topic)+ " payload: " + str(msg.payload))
         if msg.topic == "submodule/task":
             payload = json.loads(msg.payload)
             if payload["current_task"] == self.currentTask:
@@ -67,8 +68,8 @@ class Master:
             if int(msg.payload) < len(self.assemblyLists) and int(msg.payload) >=0:
                 self.currentAssemblyList = int(msg.payload)
                 self.publishCurrentTask()
-        else:
-            print("topic: " + str(msg.topic)+ " payload: " + str(msg.payload))
+        #else:
+        #    print("topic: " + str(msg.topic)+ " payload: " + str(msg.payload))
 
 
     def readAssembylLists(self):
@@ -80,7 +81,7 @@ class Master:
             assembyList = AssemblyList(name= ipc['IPC'],task= [])
 
             for i,task in enumerate(ipc['Tasks']):
-                assembyList.task.append( Task(index = i, name = task['Name'], description=task['Description'], max_index= len(ipc['Tasks'])))
+                assembyList.task.append( Task(index = i, name = task['Name'], description=task['Description'], max_index= len(ipc['Tasks'])-1))
             
             assemblyLists.append(assembyList)
 
