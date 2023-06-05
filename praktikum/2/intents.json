@@ -1,0 +1,89 @@
+{
+    "intents": [
+        {
+            "tag": "test",
+            "patterns": [
+                "test",
+                "testing",
+                "this is a test"
+            ],
+            "responses": [
+                "Test success."
+            ]
+        },
+        {
+            "tag": "greeting",
+            "patterns": [
+                "Hi",
+                "Hello",
+                "What's up?",
+                "How are you?"
+            ],
+            "responses": [
+                "Hello.",
+                "What can I do for you?",
+                "How may I help you?"
+            ]
+        },
+        {
+            "tag": "wikipedia",
+            "patterns": [
+                "wikipedia",
+                "wiki search",
+                "search in wiki",
+                "search in wikipedia"
+            ],
+            "responses": [
+                ""
+            ]
+        },
+        {
+            "tag": "jokes",
+            "patterns": [
+                "tell me a joke",
+                "tell a joke",
+                "joke",
+                "say a joke"
+            ],
+            "responses": [
+                ""
+            ]
+        },
+        {
+            "tag": "weather",
+            "patterns": [
+                "tell me the weather",
+                "what's the weather?",
+                "weather",
+                "is it sunny?"
+            ],
+            "responses": [
+                ""
+            ]
+        },
+        {
+            "tag": "youtube",
+            "patterns": [
+                "play a youtube video",
+                "open youtube",
+                "youtube",
+                "play youtube"
+            ],
+            "responses": [
+                ""
+            ]
+        },
+        {
+            "tag": "stop",
+            "patterns": [
+                "stop",
+                "close",
+                "shut down",
+                "terminate"
+            ],
+            "responses": [
+                ""
+            ]
+        }
+    ]
+}
