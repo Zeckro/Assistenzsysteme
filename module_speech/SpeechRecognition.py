@@ -6,10 +6,14 @@ from transformers import pipeline
 import time
 import json
 from enum import Enum
+import asyncio
+from EdgeGPT import Chatbot
 
 WAKE_WORD = "roxy"
 CONFIDENCE = 0.70
 TIMEOUT = 30
+USE_BING = True
+DEBUG = True
 #forward_labels = ["forward", "next"]
 forward_labels = ["step forward"]
 #backward_labels = ["backward", "previous"]
@@ -24,17 +28,23 @@ class SpeechRecognition:
     def on_connect(self,client, userdata, flags, rc):
         print("Connected with result code " + str(rc))
         client.subscribe("master/current_task")
+        print("Waiting for task from master")
+
 
     def on_message(self,client, userdata, msg):
         print("Message received: ")
         if msg.topic == "master/current_task":
             print(msg.topic+" "+str(msg.payload))
-            try:
-                payload = json.loads(msg.payload)
-                self.task = payload['index']
-                self.gotTask = True
-            except Exception as e:
-                print(e)
+            if msg.payload == "finished":
+                print("Finished... Waiting for new task")
+            else:
+                try:
+                    payload = json.loads(msg.payload)
+                    self.task = payload['index']
+                    self.gotTask = True
+                    print("Listening for wake word...")
+                except Exception as e:
+                    print(e)
         else:
             print(msg.topic+" "+str(msg.payload))
 
@@ -44,47 +54,89 @@ class SpeechRecognition:
         self.client = mqtt.Client(client_id="speech")
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
-        self.client.connect("192.168.137.1", 1883, 60)
-
+        if DEBUG:
+            self.client.connect("localhost", 1883, 60)
+        else:
+            self.client.connect("192.168.137.1", 1883, 60)
+        print("MQTT client initialized")
         self.gotTask = False
-        self.processor = pipeline(model="facebook/bart-large-mnli", normalize_scores = False)
+        if USE_BING:
+            print("Using Bing Chat...")
+            try:
+                with open('./module_speech/cookies.json') as json_file:
+                    with open('./module_speech/prompt.txt') as prompt_file:
+                        self.cookies = json.load(json_file)
+                        self.prompt = prompt_file.read()
+                        self.bot = Chatbot(cookies=self.cookies)
+                        print("Chatbot initialized")
+            except Exception as e:
+                print("Error opening file: "+ str(e))
+                return
+        else:
+            print("Using tranformer pipeline")
+            self.processor = pipeline(model="facebook/bart-large-mnli", multi_label = True)
+            print("Processing-Model initialized")
+
         end = time.time()
-        print("MQTT-Client and Processing-Model initialised")
         print("Init took " + str(end-start) + " seconds")
-        start = time.time()
-        print("Waiting for task from master")
+        #start = time.time()
         #while(not self.gotTask):
         #    if time.time() - start  >= TIMEOUT:
         #        raise TimeoutError("Did not receive a task from master in specified timeout period (" + str(TIMEOUT) + " seconds)")
         #    time.sleep(0.1)
-        t = threading.Thread(target=SpeechRecognition.listen, args=(self,))
-        t.daemon = True
-        t.start()
+
+        if DEBUG:
+            self.task = 0
+            t = threading.Thread(target=SpeechRecognition.wake_word_callback, args=(self,"im finished",))
+            t.daemon = True
+            t.start()
+        else:
+            t = threading.Thread(target=SpeechRecognition.listen, args=(self,))
+            t.daemon = True
+            t.start()
+
+    async def askBing(self,text):
+        print("Asking Bing...")
+        answer = await self.bot.ask(prompt=self.prompt + ' ' + text)
+        answer = answer["item"]["messages"][1]["text"]
+        answer = answer.partition("ClassfyGPT: ")[2].replace("(","").replace(")","")
+        labels_confidences = [pair.strip().split(" Confidence: ") for pair in answer.split(",")]
+        labels = [pair[0] for pair in labels_confidences]
+        confidences = [float(pair[1]) for pair in labels_confidences]
+        selected_label = [label for label, confidence in zip(labels, confidences) if confidence > 80]
+        if not selected_label == "Other":
+            self.publishTask(NextStep.FORWARD if selected_label == "Forward" else NextStep.BACKWARD)
+        else:
+            #other
+            pass
 
     # callback function
     def wake_word_callback(self, text):
         try:
             print("Wake word detected! Processing text: "+text)
-            response = self.processor(
-                text,
-                #candidate_labels= forward_labels + backward_labels + ["other"],
-                candidate_labels= forward_labels + backward_labels,
-            )
-            print(response)
-            forward_confidence = 0
-            backward_confidence = 0
-            for i, label in enumerate(response["labels"]):
-                if(label in forward_labels):
-                    forward_confidence += (response["scores"][i])
-                if(label in backward_labels):
-                    backward_confidence += (response["scores"][i])
-
-            #if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE and not response["labels"][0] =="other"):
-            if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE):
-                self.publishTask(NextStep.FORWARD if response["labels"][0] in forward_labels else NextStep.BACKWARD)
+            if USE_BING:
+                asyncio.run(self.askBing(text))
             else:
-                #other
-                pass
+                response = self.processor(
+                    text,
+                    #candidate_labels= forward_labels + backward_labels + ["other"],
+                    candidate_labels= forward_labels + backward_labels,
+                )
+                print(response)
+                forward_confidence = 0
+                backward_confidence = 0
+                for i, label in enumerate(response["labels"]):
+                    if(label in forward_labels):
+                        forward_confidence += (response["scores"][i])
+                    if(label in backward_labels):
+                        backward_confidence += (response["scores"][i])
+
+                #if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE and not response["labels"][0] =="other"):
+                if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE):
+                    self.publishTask(NextStep.FORWARD if response["labels"][0] in forward_labels else NextStep.BACKWARD)
+                else:
+                    #other
+                    pass
         except:
             print("Error processing text")
 
@@ -119,7 +171,6 @@ class SpeechRecognition:
             # Calibrate the microphone to remove noise
             r.adjust_for_ambient_noise(source)
             r.energy_threshold = 1000  # TODO bringt das was?
-            print("Listening for wake word...")
 
             while True:
                 if self.gotTask:
