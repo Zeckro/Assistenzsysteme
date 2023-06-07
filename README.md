@@ -13,4 +13,4 @@ pip install paho-mqtt<br>
 TODO
 
 ## HMI Module Requirements
-TODO
+The mqtt-spy JAR file is in module_hmi folder, no installation required. Path is set in .classpath file in the same folder.
