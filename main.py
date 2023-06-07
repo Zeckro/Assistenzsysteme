@@ -89,7 +89,8 @@ class Master:
     
     def printAssemblyLists():
         #TODO
-        pass
+        raise NotImplementedError
+
     
 if __name__ == '__main__':
     master = Master()
