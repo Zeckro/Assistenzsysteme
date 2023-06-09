@@ -1,19 +1,17 @@
 package gui;
 
 /**
- * Die Hauptklasse, die das Model erstellt und die View verwaltet.
- * @author paulj
- *
+ * Main class to start the GUI.
  */
 public class GUI {
 	
 	public static void main(String[] args) {
-		// Das Model wird angelegt
+		// Create model
 		Model model = new Model();
-		// Die Views, welche die Daten anzeigen werden angelegt
+		// Create view
 		View view = new View(model);
 	
-		// Die Views tragen sich bei dem Model ein
+		// Register view in model 
 		model.setView(view);
 	}
 

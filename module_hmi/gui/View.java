@@ -24,33 +24,29 @@ import javax.swing.border.EmptyBorder;
 public class View extends JFrame {
 	private static final long serialVersionUID = 1L;
 
-	// Referenz auf das Model 
+	// Reference to the model 
 	private Model model;
 	
-	// AWT
+	// AWT related variables
 	private CardLayout cardLayout;
 
-	// Swing
+	// Swing related variables
 	private JTextArea txtOutputMenu, txtOutputTasks;
 	private JTextField tfTaskTitle;
 	private JButton btnNext, btnNextStep;
 	private JComboBox<String> cb;
-//	private ArrayList<Task[]> tasks = new ArrayList<>();
-//	private ArrayList<String> tasksName = new ArrayList<>();
 	private String[] ipcs = {"No IPCs available"};
-//	private String image = "image.jpg";
-//	private byte[] imageBytes;
 	private JLabel imageLabel = new JLabel();
-	private JLabel imageLabel2 = new JLabel();
+	private JLabel imageLabelTask = new JLabel();
 
-	// Konstruktor
+	// Constructor
 	public View(Model model) {
 		this.model = model;
 		
 		cardLayout = new CardLayout(0, 0);
 		setOutputTxtAreas();
 
-		setTitle("Assistenzsystem für die Montage von Bauteilen GUI");
+		setTitle("Assembly Wizard GUI");
 		setMinimumSize(new Dimension(900, 800));
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLayout(cardLayout);
@@ -60,7 +56,7 @@ public class View extends JFrame {
 		menuPanel.setLayout(new BorderLayout(3, 3));
 		add(menuPanel, "Menu");
 		
-		// Menüzeile hinzufügen
+		// Menubar
 		createMenuBar();
 		
 		JPanel optionsPanel = createOptionsPanel();
@@ -69,7 +65,7 @@ public class View extends JFrame {
 		JPanel southArea = createNextButtonOutputPanel();
 		menuPanel.add(southArea, BorderLayout.SOUTH);
 		
-		// Panels für Eingabe bei Funktionen erstellen
+		// Create panels for tasks
 		JPanel tasksPanel = new JPanel();
 //		tasksPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
 		tasksPanel.setLayout(new BorderLayout(3, 3));
@@ -84,7 +80,7 @@ public class View extends JFrame {
 		tfTaskTitle.setHorizontalAlignment(SwingConstants.CENTER);
 		taskInfo.add(tfTaskTitle, BorderLayout.NORTH);
 		JPanel imagePanel = new JPanel();
-		imagePanel.add(imageLabel2);
+		imagePanel.add(imageLabelTask);
 		taskInfo.add(imagePanel, BorderLayout.CENTER);
 		tasksPanel.add(taskInfo);
 		JPanel southAreaTasks = createBackNextButtonsOutputPanel(txtOutputTasks);
@@ -93,48 +89,14 @@ public class View extends JFrame {
 		refresh();
 
 		setLocation(250, 60);
-		setBounds(100, 100, 450, 310);
+//		setBounds(100, 100, 450, 310);
+		setStandardBounds();
 		setVisible(true);
 		
 		model.mqttConnectAndSubscribe();
 	}
 
 	// Getters/Setters
-	
-	/**
-	 * @return the cardLayout
-	 */
-	public CardLayout getCardLayout() {
-		return cardLayout;
-	}
-
-//	/**
-//	 * @return the currentTasks
-//	 */
-//	public ArrayList<Task[]> getTasks() {
-//		return tasks;
-//	}
-//
-//	/**
-//	 * @param tasks the tasks to set
-//	 */
-//	public void setTasks(ArrayList<Task[]> tasks) {
-//		this.tasks = tasks;
-//	}
-//
-//	/**
-//	 * @return the currentTasks
-//	 */
-//	public Task[] getCurrentTasks() {
-//		return currentTasks;
-//	}
-//
-//	/**
-//	 * @param currentTasks the currentTasks to set
-//	 */
-//	public void setCurrentTasks(Task[] currentTasks) {
-//		this.currentTasks = currentTasks;
-//	}
 	
 	/**
 	 * @return the ipcs
@@ -179,32 +141,24 @@ public class View extends JFrame {
 	}
 
 	/**
-	 * @return the imageLabel
-	 */
-	public JLabel getImageLabel() {
-		return imageLabel;
-	}
-
-	/**
 	 * @param imageLabel the imageLabel to set
 	 */
 	public void setImageLabel(ImageIcon icon) {
 	    this.imageLabel.setIcon(icon);
-	    this.imageLabel2.setIcon(icon);
+	    this.imageLabelTask.setIcon(icon);
 	}
 
-	// Methoden
+	// Methods
 
 	/**
-	 * Wird ausgeführt, wenn sich etwas an den Daten im Model ändert.
+	 * Sets standard bounds to maximized.
 	 */
-	public void refresh() {
-		txtOutputMenu.setText(model.getOutput());
-		txtOutputTasks.setText(model.getOutput());
+	public void setStandardBounds() {
+		setExtendedState(JFrame.MAXIMIZED_BOTH);
 	}
 	
 	/**
-	 * Erstellt die benötigten Ausgabe-TextAreas.
+	 * Creates the necessaryoutput text areas.
 	 */
 	public void setOutputTxtAreas() {
 		txtOutputMenu = new JTextArea(6, 10);
@@ -219,15 +173,23 @@ public class View extends JFrame {
 	}
 	
 	/**
-	 * Erstellt die Menüzeile.
+	 * Refreshes output text areas.
+	 */
+	public void refresh() {
+		txtOutputMenu.setText(model.getOutput());
+		txtOutputTasks.setText(model.getOutput());
+	}
+	
+	/**
+	 * Creates the menu bar.
 	 */
 	public void createMenuBar() {
 		JMenuBar menuBar = new JMenuBar();
 
-		// Menü-Einträge werden angelegt und zur Menüleiste hinzugefügt
-		JMenu fileMenu = new JMenu("Weiteres");
+		// Menu entries
+		JMenu fileMenu = new JMenu("File");
 		menuBar.add(fileMenu);
-		JMenu helpMenu = new JMenu("Hilfe");
+		JMenu helpMenu = new JMenu("Help");
 		menuBar.add(helpMenu);
 
 		helpMenu.add(new aboutMenuControl());
@@ -235,15 +197,15 @@ public class View extends JFrame {
 		fileMenu.add(new homeMenuControl(model));
 		fileMenu.add(new quitMenuControl());
 
-		// Menüleiste und Fenster/Frame werden verbunden
+		// Connect menu bar and frame
 		setJMenuBar(menuBar);
 
 		setVisible(true);
 	}
 	
 	/**
-	 * Erstellt ein Panel mit den drei Auswahloptionen.
-	 * @return Das erstellte Optionen-Panel
+	 * Creates a panel with a combo box.
+	 * @return The created options panel
 	 */
 	public JPanel createOptionsPanel() {
 		JPanel panel = new JPanel();
@@ -257,20 +219,20 @@ public class View extends JFrame {
 	}
 	
 	/**
-	 * Erstellt ein Panel mit Weiter-Button und Ausgabe-Textfeld.
-	 * @return Das erstellte Panel
+	 * Creates a panel with 'Next' button and output text area.
+	 * @return The created panel
 	 */
 	public JPanel createNextButtonOutputPanel() {
 		JPanel panel = new JPanel();
 		GridBagConstraints constraints = new GridBagConstraints();
-		JScrollPane scrollTxt = new JScrollPane(txtOutputMenu); // Scrollbare TextArea, falls Text zu lang
-		btnNext = new JButton("Weiter");
+		JScrollPane scrollTxt = new JScrollPane(txtOutputMenu);
+		btnNext = new JButton("Next");
 		btnNext.addActionListener(new nextButtonControl(model));
 		Dimension btnSize = btnNext.getPreferredSize();
-        btnSize.height = 50; // bevorzugte Höhe setzen
+        btnSize.height = 50;
         btnNext.setPreferredSize(btnSize);
 		panel.setLayout(new GridBagLayout());
-		// Layout für Weiter-Button definieren
+		// Layout of the 'Next' button
 		constraints.fill = GridBagConstraints.HORIZONTAL;
 		constraints.ipady = 0;
 		constraints.weightx = 0.5;
@@ -278,38 +240,39 @@ public class View extends JFrame {
 		constraints.gridy = 1;
 		constraints.insets = new Insets(10, 10, 10, 10);
 		constraints.anchor = GridBagConstraints.PAGE_END;
-		panel.add(btnNext, constraints); // Button mit Constraints hinzufügen
-		// Layout für TextArea definieren
+		panel.add(btnNext, constraints);
+		// Layout of the text area
 		constraints.fill = GridBagConstraints.HORIZONTAL;
 		constraints.ipady = 0;
 		constraints.gridx = 0;
 		constraints.gridy = 0;
-		panel.add(scrollTxt, constraints); // ScrollPane mit Constraints zum Panel hinzufügen
+		panel.add(scrollTxt, constraints);
 		return panel;
 	}
 	
 	/**
-	 * Erstellt ein Panel mit Weiter-Button und Ausgabe-Textfeld.
-	 * @return Das erstellte Panel
+	 * Creates a panel with 'Next' button and output text area.
+	 * @param txt The JTextArea to add to the panel
+	 * @return The created panel
 	 */
 	public JPanel createBackNextButtonsOutputPanel(JTextArea txt) {
 		JPanel panel = new JPanel();
 		GridBagConstraints constraints = new GridBagConstraints();
-		JScrollPane scrollTxt = new JScrollPane(txt); // Scrollbare TextArea, falls Text zu lang
-		JButton btnBack = new JButton("Zurück");
+		JScrollPane scrollTxt = new JScrollPane(txt);
+		JButton btnBack = new JButton("Back");
 		btnBack.setEnabled(true);
 		btnBack.addActionListener(new backButtonControl(model));
 		Dimension btnSize = btnBack.getPreferredSize();
-        btnSize.height = 50; // bevorzugte Höhe setzen
+        btnSize.height = 50;
         btnBack.setPreferredSize(btnSize);
-		btnNextStep = new JButton("Weiter");
+		btnNextStep = new JButton("Next");
 		btnNextStep.setEnabled(true);
 		btnNextStep.addActionListener(new nextButtonTaskControl(model));
 //		btnSize = btnNextStep.getPreferredSize();
-//        btnSize.height = 50; // bevorzugte Höhe setzen
+//      btnSize.height = 50;
         btnNextStep.setPreferredSize(btnSize);
 		panel.setLayout(new GridBagLayout());
-		// Layout für Zurück-Button definieren
+		// Layout for 'Back' button 
 		constraints.fill = GridBagConstraints.HORIZONTAL;
 		constraints.ipady = 0;
 		constraints.weightx = 0.5;
@@ -317,8 +280,8 @@ public class View extends JFrame {
 		constraints.gridy = 0;
 		constraints.insets = new Insets(10, 10, 10, 10);
 		constraints.anchor = GridBagConstraints.PAGE_START;
-		panel.add(btnBack, constraints); // Button mit Constraints hinzufügen
-		// Layout für Start-Button definieren
+		panel.add(btnBack, constraints);
+		// Layout for 'Next' button 
 		constraints.fill = GridBagConstraints.HORIZONTAL;
 		constraints.ipady = 0;
 		constraints.weightx = 0.5;
@@ -326,20 +289,20 @@ public class View extends JFrame {
 		constraints.gridy = 0;
 		constraints.insets = new Insets(10, 10, 10, 10);
 		constraints.anchor = GridBagConstraints.PAGE_END;
-		panel.add(btnNextStep, constraints); // Button mit Constraints hinzufügen
-		// Layout für TextArea definieren
+		panel.add(btnNextStep, constraints);
+		// Layout for text area 
 		constraints.fill = GridBagConstraints.HORIZONTAL;
 		constraints.ipady = 0;
 		constraints.gridwidth = 2;
 		constraints.gridx = 0;
 		constraints.gridy = 1;
-		panel.add(scrollTxt, constraints); // ScrollPane mit Constraints zum Panel hinzufügen
+		panel.add(scrollTxt, constraints);
 		return panel;
 	}
 	
 	/**
-	 * Wechselt zum Panel, dessen Name übergeben werden muss.
-	 * @param panel Die Bezeichnung für das Panel
+	 * Switches to a panel.
+	 * @param panel The name of the panel
 	 */
 	public void switchToPanel(String panel) {
 		cardLayout.show(getContentPane(), panel);

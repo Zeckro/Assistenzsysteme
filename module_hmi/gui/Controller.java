@@ -11,15 +11,12 @@ import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 
 /**
- * Die Superklasse für alle Controller mit ActionListener.
- * @author paulj
- *
+ * The superclass implementing ActionListener for all controller related classes.
  */
 public abstract class Controller implements ActionListener {
-	// Referenz auf das Model
 	private Model model;
 
-	// Konstruktor
+	// Constructor
 	public Controller(Model model) {
 		this.setModel(model);
 	}
@@ -43,9 +40,7 @@ public abstract class Controller implements ActionListener {
 }
 
 /**
- * Der Controller für einen Weiter-Button.
- * @author paulj
- *
+ * The controller for a 'Next' button on the homepage.
  */
 class nextButtonControl extends Controller {
 
@@ -61,9 +56,7 @@ class nextButtonControl extends Controller {
 }
 
 /**
- * Der Controller für einen Zurück-Button.
- * @author paulj
- *
+ * The controller for a 'Back' button on a task page.
  */
 class backButtonControl extends Controller {
 
@@ -79,9 +72,7 @@ class backButtonControl extends Controller {
 }
 
 /**
- * Der Controller für einen Weiter-Button bei den Aufgabe.
- * @author paulj
- *
+ * The controller for a 'Next' button on a task page.
  */
 class nextButtonTaskControl extends Controller {
 
@@ -97,17 +88,13 @@ class nextButtonTaskControl extends Controller {
 }
 
 /**
- * Der Controller für den Menüpunkt 'Über'.
- * @author paulj
- *
+ * The controller for the menu option 'About'.
  */
 class aboutMenuControl extends AbstractAction {
 	private static final long serialVersionUID = 1L;
 
 	public aboutMenuControl() {
-		putValue(Action.NAME, "Über...");
-		putValue(Action.MNEMONIC_KEY, 0);
-		// Tastaturkürzel setzen (bei Erstellung)
+		putValue(Action.NAME, "About...");
 		putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_H, KeyEvent.CTRL_DOWN_MASK));
 	}
 
@@ -120,9 +107,7 @@ class aboutMenuControl extends AbstractAction {
 }
 
 /**
- * Der Controller für den Menüpunkt 'Startseite'.
- * @author paulj
- *
+ * The controller for the menu option 'Homepage'.
  */
 class homeMenuControl extends AbstractAction {
 	private static final long serialVersionUID = 1L;
@@ -130,8 +115,7 @@ class homeMenuControl extends AbstractAction {
 	private Model model;
 
 	public homeMenuControl(Model model) {
-		putValue(Action.NAME, "Startseite");
-		// Tastaturkürzel setzen (bei Erstellung)
+		putValue(Action.NAME, "Homepage");
 		putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_0, KeyEvent.CTRL_DOWN_MASK));
 		this.model = model;
 	}
@@ -143,15 +127,14 @@ class homeMenuControl extends AbstractAction {
 }
 
 /**
- * Der Controller für den Menüpunkt 'Beenden'.
- * @author paulj
+ * The controller for the menu option 'Exit'.
  *
  */
 class quitMenuControl extends AbstractAction {
 	private static final long serialVersionUID = 1L;
 
 	public quitMenuControl() {
-		putValue(Action.NAME, "Beenden");
+		putValue(Action.NAME, "Exit");
 	}
 
 	@Override
