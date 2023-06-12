@@ -63,6 +63,7 @@ class Master:
                     self.publishCurrentTask()
                 else:
                     self.publishAssemblyList()
+                    self.currentTask = 0
                     self.client.publish("master/current_task", payload="finished", retain= True, qos= 2)
         elif msg.topic == "submodule/choose_list":
             if int(msg.payload) < len(self.assemblyLists) and int(msg.payload) >=0:
