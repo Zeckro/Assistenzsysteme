@@ -149,7 +149,11 @@ public class Model {
 //			view.switchToPanel("Tasks");
 		} else if (currentTask != null && taskStep >= 0) {
 			setNameAndDescription();
-			view.getBtnNextStep().setText("Next");
+			if (taskStep == currentTask.getMaxIndex()) {
+				view.getBtnNextStep().setText("Done");
+			} else {
+				view.getBtnNextStep().setText("Next");
+			}
 			view.switchToPanel("Tasks");
 		} else {
 			displayOutput = "An error occurred.";
