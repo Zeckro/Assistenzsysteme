@@ -13,7 +13,7 @@ WAKE_WORD = "roxy"
 CONFIDENCE = 0.70
 TIMEOUT = 30
 USE_BING = True
-DEBUG = True
+DEBUG = False
 #forward_labels = ["forward", "next"]
 forward_labels = ["step forward"]
 #backward_labels = ["backward", "previous"]
@@ -97,15 +97,19 @@ class SpeechRecognition:
 
     async def askBing(self,text):
         print("Asking Bing...")
-        answer = await self.bot.ask(prompt=self.prompt + ' ' + text + '"')
+        task = self.task
+        answer = await self.bot.ask(prompt=self.prompt + ' ' + text + '"', conversation_style="precise", locale = "en-US")
+        await self.bot.close()
+        print("Answer recieved")
         answer = answer["item"]["messages"][1]["text"]
         answer = answer.partition("ClassfyGPT: ")[2].replace("(","").replace(")","")
+        print(answer)
         labels_confidences = [pair.strip().split(" Confidence: ") for pair in answer.split(",")]
         labels = [pair[0] for pair in labels_confidences]
         confidences = [float(pair[1]) for pair in labels_confidences]
-        selected_label = [label for label, confidence in zip(labels, confidences) if confidence > 80]
-        if not selected_label == "Other":
-            self.publishTask(NextStep.FORWARD if selected_label == "Forward" else NextStep.BACKWARD)
+        selected_labels = [label for label, confidence in zip(labels, confidences) if confidence > 80]
+        if selected_labels and not "Other" in selected_labels:
+            self.publishTask(NextStep.FORWARD if "Forward" in selected_labels else NextStep.BACKWARD, task)
         else:
             #other
             pass
@@ -117,6 +121,7 @@ class SpeechRecognition:
             if USE_BING:
                 asyncio.run(self.askBing(text))
             else:
+                task = self.task
                 response = self.processor(
                     text,
                     #candidate_labels= forward_labels + backward_labels + ["other"],
@@ -133,16 +138,19 @@ class SpeechRecognition:
 
                 #if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE and not response["labels"][0] =="other"):
                 if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE):
-                    self.publishTask(NextStep.FORWARD if response["labels"][0] in forward_labels else NextStep.BACKWARD)
+                    self.publishTask(NextStep.FORWARD if response["labels"][0] in forward_labels else NextStep.BACKWARD, self.task)
                 else:
                     #other
                     pass
-        except:
-            print("Error processing text")
+        except Exception as e:
+            print("Error processing text {0}".format(e))
 
-    def publishTask(self, nextStep: NextStep):
-        new_task = self.task-1 if nextStep == NextStep.BACKWARD else self.task+1
-        payload = json.dumps({"current_task": self.task, "new_task": new_task})
+    def publishTask(self, nextStep: NextStep, currentTask):
+        old_task = currentTask
+        print("currentTask: {}".format(currentTask))
+        new_task = currentTask-1 if nextStep == NextStep.BACKWARD else currentTask+1
+        print("newTask: {}".format(new_task))
+        payload = json.dumps({"current_task": old_task, "new_task": new_task})
         print(payload)
         self.client.publish("submodule/task", payload, qos=1)
 
@@ -160,7 +168,7 @@ class SpeechRecognition:
             p.terminate()
             print("Finished playing audio")
         except Exception as e:
-            print("Error playing audio: ", e)
+            print("Error playing audio: {0}".format(e))
 
     def listen(self):
         # Initialize the recognizer
