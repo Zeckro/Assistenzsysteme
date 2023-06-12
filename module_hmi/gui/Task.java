@@ -8,10 +8,10 @@ public class Task {
 	private int maxIndex;
 
 	/**
-	 * Konstruktor
+	 * Constructor
 	 * 
-	 * @param name Der Name der Aufgabe
-	 * @param descr Die Beschreibung der Aufgabe
+	 * @param name The name of the task
+	 * @param descr The description of the task
 	 */
 	public Task(int index, String name, String descr, int maxIndex) {
 		setIndex(index);
