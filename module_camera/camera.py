@@ -43,9 +43,9 @@ class CameraControl:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
 
-        self.client.connect("localhost", 1883, 60)
+        self.client.connect("192.168.137.1", 1883, 60)
         dir_path = os.path.dirname(os.path.realpath(__file__))  
-        self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_bigDensedropout.h5')
+        self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_smalldropout.h5')
         try:
             self.model = keras.models.load_model(self.path)
             self.sequence_length = self.model.layers[0].input_shape[1]
@@ -79,7 +79,7 @@ class CameraControl:
         """
         mp_drawing = mp.solutions.drawing_utils
         mp_hand = mp.solutions.hands
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
 
         with mp_hand.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
             
@@ -127,10 +127,11 @@ class CameraControl:
             startTime = time.time()
             if self.imageAcqStarted:
                 image = self.image.copy()
+                image = cv2.resize(image,[200,150])
                 _, img_encoded = cv2.imencode('.jpg', image)
                 byte_array = img_encoded.tobytes()
                 self.client.publish("image_topic", byte_array)
-            time.sleep(0.05)
+            time.sleep(0.1)
             #print("Time SendPic: ",time.time()-startTime)
 
 
@@ -209,12 +210,14 @@ class CameraControl:
                         self.TaskPerformednextState = False
                         nextStateReseted = False
                         self.timeCorrectTask = time.time()
-                        self.client.publish("submodule/task",json.dumps({"current_task": self.currentIndex, "new_task": self.currentIndex+1}),qos=1)
+                        print("MQTT Publish will be send!")
+                        self.client.publish("submodule/task",json.dumps({"current_task": self.currentIndex, "new_task": self.currentIndex+1}),qos=2)
                         print("MQTT Publish was performed!")
                     elif self.recognizedTask != self.currentTask and self.recognizedTask != "nextState":
                         self.timeCorrectTask = time.time()
                         nextStateReseted = True
-                    print("tastk performed:"+str(self.TaskPerformed)+"reset:"+str(nextStateReseted))
+                        self.TaskPerformednextState = False
+                    print("task performed:"+str(self.TaskPerformed)+"nextStatePerformed:"+str(self.TaskPerformednextState)+"reset:"+str(nextStateReseted)+"time"+str(time.time()-self.timeCorrectTask))
                     
 
             else:
