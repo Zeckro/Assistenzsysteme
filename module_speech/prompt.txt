@@ -10,4 +10,4 @@ ClassfyGPT: Backward (Confidence: 91.2), Forward (Confidence: 2.7), Other (Confi
 user input: "I hate this job."
 ClassfyGPT: Other (Confidence: 83.79), Forward (Confidence: 2.7), Backward (Confidence: 3)
 
-user: 
+user input: " 
