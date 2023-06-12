@@ -97,7 +97,7 @@ class SpeechRecognition:
 
     async def askBing(self,text):
         print("Asking Bing...")
-        answer = await self.bot.ask(prompt=self.prompt + ' ' + text)
+        answer = await self.bot.ask(prompt=self.prompt + ' ' + text + '"')
         answer = answer["item"]["messages"][1]["text"]
         answer = answer.partition("ClassfyGPT: ")[2].replace("(","").replace(")","")
         labels_confidences = [pair.strip().split(" Confidence: ") for pair in answer.split(",")]
