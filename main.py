@@ -31,15 +31,14 @@ class Master:
         self.client.on_message = self.on_message
         self.client.connect("192.168.137.1", 1883, 60)
         
-        #TODO dont hardcode
         self.currentAssemblyList = 0
         self.currentTask = 0
         print("Publish inital Task")
         self.publishAssemblyList()
-        #self.client.publish("master/current_task",self.assemblyLists[self.currentAssemblyList].task[self.currentTask].to_json())
                             
         pass
 
+    #publish assembly lists so ipc can be chosen
     def publishAssemblyList(self):
         available = json.dumps({"Available IPCs": [str(i.name) for i in self.assemblyLists]})
         self.client.publish("master/choose_list", payload=available, retain= True, qos= 2)
@@ -48,7 +47,6 @@ class Master:
         self.client.publish("master/current_task",self.assemblyLists[self.currentAssemblyList].task[self.currentTask].to_json(), retain= True, qos=2)
     #MQTT methods
     def on_connect(self,client, userdata, flags, rc):
-
         print("Connected with result code " + str(rc))
         client.subscribe("submodule/+")
         client.subscribe("master/#")
@@ -69,8 +67,6 @@ class Master:
             if int(msg.payload) < len(self.assemblyLists) and int(msg.payload) >=0:
                 self.currentAssemblyList = int(msg.payload)
                 self.publishCurrentTask()
-        #else:
-        #    print("topic: " + str(msg.topic)+ " payload: " + str(msg.payload))
 
 
     def readAssembylLists(self):
@@ -87,10 +83,6 @@ class Master:
             assemblyLists.append(assembyList)
 
         return assemblyLists
-    
-    def printAssemblyLists():
-        #TODO
-        raise NotImplementedError
 
     
 if __name__ == '__main__':
