@@ -79,11 +79,6 @@ class SpeechRecognition:
 
         end = time.time()
         print("Init took " + str(end-start) + " seconds")
-        #start = time.time()
-        #while(not self.gotTask):
-        #    if time.time() - start  >= TIMEOUT:
-        #        raise TimeoutError("Did not receive a task from master in specified timeout period (" + str(TIMEOUT) + " seconds)")
-        #    time.sleep(0.1)
 
         if DEBUG:
             self.task = 0
@@ -124,7 +119,6 @@ class SpeechRecognition:
                 task = self.task
                 response = self.processor(
                     text,
-                    #candidate_labels= forward_labels + backward_labels + ["other"],
                     candidate_labels= forward_labels + backward_labels,
                 )
                 print(response)
@@ -136,7 +130,6 @@ class SpeechRecognition:
                     if(label in backward_labels):
                         backward_confidence += (response["scores"][i])
 
-                #if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE and not response["labels"][0] =="other"):
                 if(forward_confidence > CONFIDENCE or backward_confidence > CONFIDENCE):
                     self.publishTask(NextStep.FORWARD if response["labels"][0] in forward_labels else NextStep.BACKWARD, self.task)
                 else:
@@ -183,16 +176,14 @@ class SpeechRecognition:
             while True:
                 if self.gotTask:
                     # Listen for audio input
-                    #audio = r.listen(source)
-                    #TODO improve listening
                     audio = r.listen(source,5,5)
-                    # DEBUG -- play audio in separate thread
-                    #t = threading.Thread(target=SpeechRecognition.play_audio, args=(self,audio,))
-                    #t.deamon = True
-                    #t.start()
+                    if (DEBUG):
+                        t = threading.Thread(target=SpeechRecognition.play_audio, args=(self,audio,))
+                        t.deamon = True
+                        t.start()
 
                     try:
-                        #  google speech recognitoin TODO funktionieren die andere besser?
+                        #  google speech recognitoin
                         text = r.recognize_google(audio).lower()
                         print(text)
                         # Check if the wake word is in the transcribed text
