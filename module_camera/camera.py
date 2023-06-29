@@ -16,36 +16,38 @@ import copy
 class CameraControl:
     #MQTT methods
     def on_connect(self,client, userdata, flags, rc):
-
+        #subscribe topics
         print("Connected with result code " + str(rc))
         client.subscribe("master/current_task")
        
 
-
     def on_message(self,client, userdata, msg):
+        "update current task if new message arrives"
         print("Message received: ")
         if msg.topic == "master/current_task":
             print(msg.payload)
-            #print(type(msg.payload))
+            
             try:
                 jsondict = json.loads(msg.payload)
                 self.currentTask = jsondict["name"]
                 self.currentIndex = jsondict["index"]
             except:
-                print("Test")
                 
-                #raise TypeError("Could not read json") 
+                raise TypeError("Could not read json") 
         else:
             print(msg.topic+" "+str(msg.payload))
 
     def __init__(self):
+        #int mqtt client
         self.client = mqtt.Client(client_id="camera")
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
 
         self.client.connect("192.168.137.1", 1883, 60)
+
+        #init model
         dir_path = os.path.dirname(os.path.realpath(__file__))  
-        self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_smalldropout.h5')
+        self.path = os.path.join(dir_path, 'model1105_relativeTolWrist_smalldropout.h5') #load model
         try:
             self.model = keras.models.load_model(self.path)
             self.sequence_length = self.model.layers[0].input_shape[1]
@@ -56,11 +58,12 @@ class CameraControl:
         self.currentTask = ""
         self.imageAcqStarted = False
 
-        with open('module_camera\\mappingActivity.pkl', 'rb') as f:
+        with open('module_camera\\mappingActivity.pkl', 'rb') as f: #load activity mapping for lstm ouput
             mappingActivity = pickle.load(f)
             self.actions = [mappingActivity[i] for i in sorted(mappingActivity.keys(), reverse=False)]
             print(self.actions)
 
+        #Threads
         poseEstimationThread = threading.Thread(target=self.getPoseEstimatedPicture)
         poseEstimationThread.daemon = True
         poseEstimationThread.start()
@@ -112,7 +115,7 @@ class CameraControl:
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     self.imageAcqStarted = False
                     break
-                #print("Time PoseEst: ",time.time()-startTime)
+               
 
         self.cap.release()
         cv2.destroyAllWindows()
@@ -124,15 +127,14 @@ class CameraControl:
         sends images (including hand coordinates visualisation) as fast as possible via MQTT for HMI
         """
         while True:
-            startTime = time.time()
             if self.imageAcqStarted:
-                image = self.image.copy()
+                image = self.image.copy()   #copy image from gloabl var
                 image = cv2.resize(image,[200,150])
                 _, img_encoded = cv2.imencode('.jpg', image)
                 byte_array = img_encoded.tobytes()
-                self.client.publish("image_topic", byte_array)
+                self.client.publish("image_topic", byte_array)  #publish image as byte array
             time.sleep(0.1)
-            #print("Time SendPic: ",time.time()-startTime)
+            
 
 
     def get_Camera_Activity(self,relativeCoordinates=True,relativeTolwrist=True):
@@ -149,21 +151,21 @@ class CameraControl:
 
         while self.imageAcqStarted:
             startTime = time.time()
-            results = self.results
-            if results.multi_hand_landmarks and len(results.multi_hand_landmarks) == 2:
+            results = copy.copy(self.results)   #copy from global variable
+            if results.multi_hand_landmarks and len(results.multi_hand_landmarks) == 2: #process if two hands are detected
                 
                 datasetLeftHand = [i for i in results.multi_hand_landmarks[0].landmark]
                 datasetRightHand = [i for i in results.multi_hand_landmarks[1].landmark]
-                dataset = [datasetLeftHand + datasetRightHand]
+                dataset = [datasetLeftHand + datasetRightHand]      #process to list
                     
                 datasettmp = []
                 if relativeCoordinates:
-                     if relativeTolwrist:
+                     if relativeTolwrist:       #relative x and y coordinates to left wrist
                         for i in dataset[0]:
                             datasettmp.append(i.x - dataset[0][0].x)
                             datasettmp.append(i.y - dataset[0][0].y)
                             datasettmp.append(i.z)
-                     else:
+                     else:  #relative to wrist on each hand (not used)
                         tmpCnt = 0
                         for i in dataset[0]:
                             if tmpCnt > 0 and tmpCnt < 21:
@@ -188,13 +190,10 @@ class CameraControl:
                     data.pop(0)
                 data.append(datasettmp)
 
-                #timeDataPreProcessing = time.time() - timeLoopBegin
 
                 if len(data) == self.sequence_length and self.currentTask != "" and self.currentTask != "finished":
-                    prediction = self.model.predict(np.expand_dims(data,axis=0))[0]
+                    prediction = self.model.predict(np.expand_dims(data,axis=0))[0] #predict task by trained model
                     self.recognizedTask = self.actions[np.argmax(prediction)]
-
-                    #timeTaskPredicition = time.time() - timeLoopBegin
 
                     print( "Recognition: " + self.recognizedTask + " ---- Task of Assembly List: " + self.currentTask)
   
@@ -206,14 +205,18 @@ class CameraControl:
                             else:
                                 self.TaskPerformed = True
                     elif (self.TaskPerformed and self.recognizedTask != self.currentTask) or (self.TaskPerformednextState and self.recognizedTask == "nextState" and nextStateReseted):    #if task successfully performend and finished
+                        #task is successfully completed
+                        #reset variables
                         self.TaskPerformed = False
                         self.TaskPerformednextState = False
                         nextStateReseted = False
                         self.timeCorrectTask = time.time()
+                        #send "completed" message via MQTT
                         print("MQTT Publish will be send!")
                         self.client.publish("submodule/task",json.dumps({"current_task": self.currentIndex, "new_task": self.currentIndex+1}),qos=2)
                         print("MQTT Publish was performed!")
                     elif self.recognizedTask != self.currentTask and self.recognizedTask != "nextState":
+                        #get current time
                         self.timeCorrectTask = time.time()
                         nextStateReseted = True
                         self.TaskPerformednextState = False
@@ -221,40 +224,13 @@ class CameraControl:
                     
 
             else:
-                time.sleep(0.1)
-            #print("Time TaskRec: ",time.time()-startTime)
-
-                    #timeImageSending = time.time() - timeLoopBegin
-                        #print("Timing")
-                        #print("Image Ac.: "+str(timeImageAcquisition) 
-                        #      + " Pose Est.: "+str(timeImagePoseEst-timeImageAcquisition)
-                        #      + " Preproc: "+str(timeDataPreProcessing-timeImagePoseEst)
-                        #      + " Task Pred.: "+str(timeTaskPredicition-timeDataPreProcessing)
-                        #      + " Sending: "+str(timeImageSending-timeTaskPredicition))
-
-                
-
-
-    
-        """
-        TO DO:
-        run programm on another pc -> checking frame rate
-        possible solutions if fps still to low:
-        -minimize neural network size -> maybe 10-20ms gain
-        -run predicition and pose estimation in two seperate threads -> at least mqtt rate is high
-        """
-
-
+                time.sleep(0.1) 
 
 
 if __name__ == '__main__':
     camera = CameraControl()
-    #camera.get_Camera_Activity()
-    #activityRecognitionTask = threading.Thread(target=CameraControl.get_Camera_Activity)
-    #activityRecognitionTask.daemon = True
-    #activityRecognitionTask.start()
     camera.client.loop_forever()
-    #activityRecognitionTask.stop()
+    
     
 
 
